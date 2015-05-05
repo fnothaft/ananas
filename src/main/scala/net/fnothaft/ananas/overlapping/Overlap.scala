@@ -86,21 +86,50 @@ object Overlap extends Serializable {
      val switchStrands = startCanonicality ^ s1Array(startKmerIdx1).isCanonical
 
       // is the set intersection of these hashes larger than the min overlap length?
+      // first, a quick comparison
       if (endKmerIdx1 - startKmerIdx1 + 15 >= minLength &&
           ((!switchStrands && endKmerIdx2 - startKmerIdx2 + 15 >= minLength) ||
            (switchStrands && startKmerIdx2 - endKmerIdx2 + 15 >= minLength))) {
         // get position metadata
         val pos1 = whereAnchored(startKmerIdx1, endKmerIdx1, s1Array.length, false)
         val pos2 = whereAnchored(startKmerIdx2, endKmerIdx2, s2Array.length, switchStrands)
-        
-        pos1.flatMap(p1 => pos2.map(p2 => Edge(s1.id, s2.id, Overlap(switchStrands,
-                                                                     s1Array(startKmerIdx1),
-                                                                     s1Array(endKmerIdx1),
-                                                                     p1,
-                                                                     p2)
-                                             )
-                                  )
-                   )
+   
+        def computeOverlapSize: Int = {
+          val s1HashSet = s1Array.drop(startKmerIdx1)
+            .take(endKmerIdx1 - startKmerIdx1)
+            .map(_.hashCode)
+            .toSet
+          val s2HashSet = if (switchStrands) {
+            s2Array.drop(endKmerIdx2)
+              .take(startKmerIdx2 - endKmerIdx2)
+              .map(_.hashCode)
+              .toSet
+          } else {
+            s2Array.drop(startKmerIdx2)
+              .take(endKmerIdx2 - startKmerIdx2)
+              .map(_.hashCode)
+              .toSet
+          }            
+          
+          s1HashSet.intersect(s2HashSet).size
+        }
+
+        // is this metadata valid?
+        pos1.flatMap(p1 => pos2.flatMap(p2 => {
+          // now, do the _true_ comparison of overlap size
+          val overlapSize = computeOverlapSize
+
+          if (overlapSize >= minLength) {
+            Some(Edge(s1.id, s2.id, Overlap(switchStrands,
+                                            s1Array(startKmerIdx1),
+                                            s1Array(endKmerIdx1),
+                                            p1,
+                                            p2,
+                                            overlapSize)))
+          } else {
+            None
+          }
+        }))
       } else {
         None
       }
@@ -112,5 +141,6 @@ case class Overlap(switchesStrands: Boolean,
                    startKmer: IntMer,
                    endKmer: IntMer,
                    alignmentPosition1: Position,
-                   alignmentPosition2: Position) {
+                   alignmentPosition2: Position,
+                   overlapSize: Int) {
 }
