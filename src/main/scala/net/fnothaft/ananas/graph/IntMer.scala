@@ -125,10 +125,10 @@ case class IntMer(kmer: Int,
 
   private def getBase(k: Int,
                       m: Int): Char = {
-    if ((mask & 0x3) != 0) {
+    if ((m & 0x3) != 0) {
       'N'
     } else {
-      (kmer & 0x3) match {
+      (k & 0x3) match {
         case 0 => 'A'
         case 1 => 'C'
         case 2 => 'G'
@@ -138,20 +138,19 @@ case class IntMer(kmer: Int,
   }
 
   override def toString: String = {
-    @tailrec def buildString(shiftKmer: Int = 0,
-                             shiftMask: Int = 0,
-                             sb: StringBuffer = new StringBuffer(),
-                             i: Int = 0): String = {
-      if (i == 16) {
-        sb.toString
+    @tailrec def buildString(shiftKmer: Int,
+                             shiftMask: Int,
+                             a: Array[Char],
+                             i: Int = 15): String = {
+      if (i < 0) {
+        a.mkString
       } else {
-        sb.append(getBase(shiftKmer,
-                          shiftMask))
-        buildString(shiftKmer >> 2, shiftMask >> 2, sb, i + 1)
+        a(i) = getBase(shiftKmer, shiftMask)
+        buildString(shiftKmer >>> 2, shiftMask >>> 2, a, i - 1)
       }
     }
     
-    buildString()
+    buildString(kmer, mask, new Array[Char](16))
   }
 
   def lastBase: Char = {

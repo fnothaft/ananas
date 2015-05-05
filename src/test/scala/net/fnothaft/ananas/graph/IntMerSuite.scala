@@ -42,6 +42,7 @@ class IntMerSuite extends FunSuite {
     assert(kmer.mask === 0x0)
     assert(kmer.rcKmer === 0x4444BBBB)
     assert(kmer.rcMask === 0x0)
+    assert(kmer.toString === "ACACACACTGTGTGTG")
   }
 
   test("build a masked k-mer") {
@@ -51,17 +52,22 @@ class IntMerSuite extends FunSuite {
     assert(kmer.mask === 0x30)
     assert(kmer.rcKmer === 0x4C44BBBB)
     assert(kmer.rcMask === 0xC000000)
+    assert(kmer.toString === "ACACACACTGTGTNTG")
   }
 
   test("compare compatible proper and masked k-mers") {
     val kmer = IntMer("ACACACACTGTGTGTG")
     val mmer = IntMer("ACACACACTGTGTNTG")
+    
     assert(kmer.equals(mmer))
   }
 
   test("compare reverse compliment k-mers") {
     val kmer = IntMer("ACACACACTGTGTGTG")
     val rmer = IntMer("CACACACAGTGTGTGT")
+
+    assert(kmer.isCanonical)
+    assert(!rmer.isCanonical)
     assert(kmer.equals(rmer))
   }
 
