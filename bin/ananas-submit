@@ -51,7 +51,6 @@ fi
   --conf spark.kryo.registrator=org.bdgenomics.adam.serialization.ADAMKryoRegistrator \
   --conf spark.kryoserializer.buffer.mb=4 \
   --conf spark.kryo.referenceTracking=true \
-  --conf spark.io.compression.codec=org.bdgenomics.utils.serialization.compression.GzipCompressionCodec \
   --conf spark.executor.memory=${ANANAS_EXECUTOR_MEMORY:-55g} \
   ${ANANAS_OPTS:- } \
   --driver-memory ${ANANAS_DRIVER_MEMORY:-55g} \

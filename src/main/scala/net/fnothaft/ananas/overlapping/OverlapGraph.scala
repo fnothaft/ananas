@@ -53,6 +53,11 @@ object OverlapGraph extends Serializable {
     val overlapEdges = overlaps.flatMap(Overlap(_, overlapLength))
 
     // create graph
-    Graph(hashedReads.map(r => (r.id, r)), overlapEdges)
+    val g = Graph(hashedReads.map(r => (r.id, r)), overlapEdges)
+
+    // unpersist reads
+    hashedReads.unpersist()
+
+    g
   }
 }

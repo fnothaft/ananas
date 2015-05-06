@@ -50,6 +50,9 @@ object TransitiveReduction extends Serializable {
     val graphWithEdges = graph.mapVertices((vid, v) => VertexWithEdges(v))
       .joinVertices(localEdges)((vid, vd, v) => VertexWithEdges(vd.v, v))
 
+    // unpersist original graph
+    graph.unpersist()
+
     // aggregate messages
     val aggregatedMsgs = graphWithEdges.aggregateMessages((ctx: EdgeContext[VertexWithEdges, Overlap, Array[(VertexId, VertexId)]]) => {
       ctx.sendToDst(ctx.srcAttr.neighbors.map(i => (ctx.srcId, i)))
@@ -142,6 +145,7 @@ object TransitiveReduction extends Serializable {
 
     // join in unnecessarily complex manner with graph... graphx!!!
     val graphButFilterEdges = graphWithEdges.joinVertices(aggregatedMsgs)(joinFn)
+    graphWithEdges.unpersist()
 
     // now, filter out edges and map down to original vertex types
     graphButFilterEdges.subgraph(et => {
