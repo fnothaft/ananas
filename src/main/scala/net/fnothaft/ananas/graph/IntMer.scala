@@ -105,12 +105,21 @@ object IntMer {
 
     kArray
   }
+
+  def toSequence(array: Array[IntMer]): String = {
+    "%s%s".format(array.head.toString,
+                  array.tail
+                    .map(_.lastBase)
+                    .mkString)
+  }
 }
 
 case class IntMer(kmer: Int,
                   mask: Int,
                   rcKmer: Int,
                   rcMask: Int) {
+  def flipCanonicality: IntMer = IntMer(rcKmer, rcMask, kmer, mask)
+  
   val (canonicalKmer, canonicalMask, isCanonical) = if (kmer > rcKmer) {
     (rcKmer, rcMask, false)
   } else {

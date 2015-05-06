@@ -81,4 +81,8 @@ class IntMerSuite extends FunSuite {
     assert(kArray(3) === IntMer("CACACTGTGTGTGCAC"))
     assert(kArray(4) === IntMer("ACACTGTGTGTGCACA"))
   }
+
+  test("round trip from k-mers to a sequence and back") {
+    assert(IntMer.toSequence(IntMer.fromSequence("ACACACACTGTGTGTGCACA")) === "ACACACACTGTGTGTGCACA")
+  }
 }
