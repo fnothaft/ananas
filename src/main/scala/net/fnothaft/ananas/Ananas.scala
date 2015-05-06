@@ -15,6 +15,8 @@
  */
 package net.fnothaft.ananas
 
+import net.fnothaft.ananas.graph.{ EmitAssembly, TransitiveReduction }
+import net.fnothaft.ananas.overlapping.OverlapGraph
 import org.apache.spark.SparkContext._
 import org.apache.spark.{ Logging, SparkContext }
 import org.bdgenomics.adam.rdd.ADAMContext._
@@ -31,21 +33,44 @@ object Ananas extends BDGCommandCompanion {
   }
 }
 
-class AnanasArgs extends Args4jBase {
+class AnanasArgs extends Args4jBase with ParquetArgs {
   @Argument(required = true, metaVar = "READS", usage = "The unaligned reads to assemble.", index = 0)
-  var genotypes: String = null
+  var reads: String = null
 
   @Argument(required = true, metaVar = "ASSEMBLY", usage = "The assembly output.", index = 1)
-  var assembly: String = null
+  var outputPath: String = null
 
   @Args4jOption(required = false, name = "-min_overlap", usage = "The minimum overlap length to consider.")
   var minOverlap: Int = 500
+
+  @Args4jOption(required = false, name = "-signature_length", usage = "The length of MinHash signatures to use.")
+  var signatureLength: Int = 512
+
+  @Args4jOption(required = false, name = "-bucket_count", usage = "The number of buckets to use.")
+  var buckets: Int = 32
 }
 
 class Ananas(protected val args: AnanasArgs) extends BDGSparkCommand[AnanasArgs] {
   val companion = Ananas
 
   def run(sc: SparkContext) {
-    ???
+    // load reads
+    val reads = sc.loadAlignments(args.reads)
+
+    // run overlapping
+    val overlapGraph = OverlapGraph.overlapReads(reads,
+                                                 args.minOverlap,
+                                                 args.signatureLength,
+                                                 args.buckets,
+                                                 None)
+
+    // reduce to a string graph
+    val stringGraph = TransitiveReduction(overlapGraph)
+
+    // assemble contigs
+    val assembly = EmitAssembly(stringGraph)
+
+    // save
+    assembly.adamParquetSave(args.outputPath)
   }
 }
