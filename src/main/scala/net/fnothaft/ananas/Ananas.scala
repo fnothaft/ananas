@@ -57,18 +57,23 @@ class Ananas(protected val args: AnanasArgs) extends BDGSparkCommand[AnanasArgs]
     // load reads
     val reads = sc.loadAlignments(args.reads)
 
+    sc.setCheckpointDir("checkpoint")
+
     // run overlapping
     val overlapGraph = OverlapGraph.overlapReads(reads,
                                                  args.minOverlap,
                                                  args.signatureLength,
                                                  args.buckets,
                                                  None)
+    overlapGraph.checkpoint()
 
     // reduce to a string graph
     val stringGraph = TransitiveReduction(overlapGraph)
+    stringGraph.checkpoint()
 
     // assemble contigs
     val assembly = EmitAssembly(stringGraph)
+    assembly.checkpoint()
 
     // save
     assembly.adamParquetSave(args.outputPath)

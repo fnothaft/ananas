@@ -289,6 +289,7 @@ object EmitAssembly extends Serializable {
     // join with graph
     val graphWithEdges = graph.mapVertices((vid, v) => LabelVertex(v))
       .joinVertices(localEdges)((vid, vd, v) => LabelVertex(vd.sequence, edges = v))
+    graph.unpersist()
 
     // pregel it 'til you make it...?
     val taggedAssemblies = Pregel(graphWithEdges,
@@ -297,7 +298,7 @@ object EmitAssembly extends Serializable {
                                              merge)
     
     // flat map assemblies down
-    taggedAssemblies.vertices
+    val g = taggedAssemblies.vertices
       .flatMap(v => v._2.sequences.map(s => (s._1, (s._2.sequence, s._2.round))))
       .groupByKey()
       .map(kv => {
@@ -316,5 +317,10 @@ object EmitAssembly extends Serializable {
           .setFragmentSequence(IntMer.toSequence(ctg))
           .build()
       })
+
+    // unpersist graph
+    taggedAssemblies.unpersist()
+
+    g
   }
 }
