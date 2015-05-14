@@ -24,4 +24,6 @@ trait CanonicalKmer {
   def lastBase: Char
   def originalLastBase: Char
   def toOriginalString: String
+
+  def longHash: Long
 }

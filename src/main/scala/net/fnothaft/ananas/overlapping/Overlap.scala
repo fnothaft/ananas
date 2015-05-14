@@ -15,7 +15,7 @@
  */
 package net.fnothaft.ananas.overlapping
 
-import net.fnothaft.ananas.models.{ IntMer, Sequence }
+import net.fnothaft.ananas.models.{ CanonicalKmer, Sequence }
 import org.apache.spark.graphx.Edge
 import scala.annotation.tailrec
 import scala.math.max
@@ -138,8 +138,8 @@ object Overlap extends Serializable {
 }
 
 case class Overlap(switchesStrands: Boolean,
-                   startKmer: IntMer,
-                   endKmer: IntMer,
+                   startKmer: CanonicalKmer,
+                   endKmer: CanonicalKmer,
                    alignmentPosition1: Position,
                    alignmentPosition2: Position,
                    overlapSize: Int) {

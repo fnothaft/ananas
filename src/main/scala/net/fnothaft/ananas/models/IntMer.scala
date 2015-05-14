@@ -156,6 +156,8 @@ case class IntMer(kmer: Int,
 
   override def hashCode: Int = kmer | mask
 
+  def longHash: Long = hashCode.toLong
+
   def equals(o: IntMer): Boolean = {
     (~(kmer ^ o.kmer) | mask | o.mask) == 0xFFFFFFFF
   }

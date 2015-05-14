@@ -21,12 +21,12 @@ import org.bdgenomics.utils.minhash.MinHashable
 object Sequence extends Serializable {
 
   def apply(readWithId: (AlignmentRecord, Long)): Sequence = {
-    Sequence(readWithId._2, IntMer.fromSequence(readWithId._1.getSequence))
+    Sequence(readWithId._2, IntMer.fromSequence(readWithId._1.getSequence).map(_.asInstanceOf[CanonicalKmer]))
   }
 }
 
 case class Sequence(id: Long,
-                    sequenceKmers: Array[IntMer],
+                    sequenceKmers: Array[CanonicalKmer],
                     name: Option[String] = None) extends MinHashable {
 
   val length = sequenceKmers.length + 15
