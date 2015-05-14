@@ -15,6 +15,7 @@
  */
 package net.fnothaft.ananas.overlapping
 
+import net.fnothaft.ananas.models.Sequence
 import org.apache.spark.rdd.RDD
 import org.apache.spark.graphx.Graph
 import org.bdgenomics.formats.avro.AlignmentRecord
@@ -22,16 +23,16 @@ import org.bdgenomics.utils.minhash.MinHash
 
 object OverlapGraph extends Serializable {
 
-  private def hashReads(reads: RDD[AlignmentRecord]): RDD[MinHashableSequence] = {
+  private def hashReads(reads: RDD[AlignmentRecord]): RDD[Sequence] = {
     reads.zipWithUniqueId
-      .map(MinHashableSequence(_))
+      .map(Sequence(_))
   }
 
   def overlapReads(reads: RDD[AlignmentRecord],
                    overlapLength: Int,
                    signatureLength: Int,
                    bands: Int,
-                   seed: Option[Long]): Graph[MinHashableSequence, Overlap] = {
+                   seed: Option[Long]): Graph[Sequence, Overlap] = {
 
     // hash and cache the reads
     val hashedReads = hashReads(reads)

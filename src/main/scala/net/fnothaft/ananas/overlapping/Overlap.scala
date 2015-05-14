@@ -15,14 +15,14 @@
  */
 package net.fnothaft.ananas.overlapping
 
-import net.fnothaft.ananas.graph.IntMer
+import net.fnothaft.ananas.models.{ IntMer, Sequence }
 import org.apache.spark.graphx.Edge
 import scala.annotation.tailrec
 import scala.math.max
 
 object Overlap extends Serializable {
   
-  def apply(triple: (Double, (MinHashableSequence, MinHashableSequence)),
+  def apply(triple: (Double, (Sequence, Sequence)),
             minLength: Int): Option[Edge[Overlap]] = {
     // unpack triple
     val (predictedSimilarity, (s1, s2)) = triple
@@ -53,12 +53,12 @@ object Overlap extends Serializable {
       
       val (startKmerIdx1, startKmerIdx2) = findStartKmer()
       val startCanonicality = s2Array(startKmerIdx2)
-        .isCanonical
+        .isOriginal
       
       // find the k-mer that "ends" the overlap
       @tailrec def findEndKmer(idx: Int = s1Array.length - 1): (Int, Int) = {
         val s2kmer = s2Hashes.get(s1Array(idx).hashCode)
-          .filter(_._1.isCanonical == startCanonicality)
+          .filter(_._1.isOriginal == startCanonicality)
         if (s2kmer.isDefined) {
           (idx, s2kmer.get._2)
         } else {
@@ -83,7 +83,7 @@ object Overlap extends Serializable {
       }
       
       // did we switch strands?
-     val switchStrands = startCanonicality ^ s1Array(startKmerIdx1).isCanonical
+     val switchStrands = startCanonicality ^ s1Array(startKmerIdx1).isOriginal
 
       // is the set intersection of these hashes larger than the min overlap length?
       // first, a quick comparison

@@ -16,14 +16,15 @@
 package net.fnothaft.ananas.graph
 
 import net.fnothaft.ananas.AnanasFunSuite
-import net.fnothaft.ananas.overlapping.{ MinHashableSequence, Overlap, Position }
+import net.fnothaft.ananas.models.Sequence
+import net.fnothaft.ananas.overlapping.{ Overlap, Position }
 import org.apache.spark.graphx.{ Edge, Graph }
 
 class TransitiveReductionSuite extends AnanasFunSuite {
 
-  def makeRead(id: Long): (Long, MinHashableSequence) = {
+  def makeRead(id: Long): (Long, Sequence) = {
     // we don't need the hashes to be populated
-    (id, MinHashableSequence(id, Array.empty))
+    (id, Sequence(id, Array.empty))
   }
 
   sparkTest("run transitive reduction with all reads on the same strand") {

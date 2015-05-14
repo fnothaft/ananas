@@ -15,7 +15,8 @@
  */
 package net.fnothaft.ananas.graph
 
-import net.fnothaft.ananas.overlapping.{ MinHashableSequence, Overlap, Position }
+import net.fnothaft.ananas.models.{ IntMer, Sequence }
+import net.fnothaft.ananas.overlapping.{ Overlap, Position }
 import org.apache.spark.SparkContext._
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
@@ -46,7 +47,7 @@ private[graph] case class RelabelMsg(id: VertexId,
 
 private[graph] object LabelVertex extends Serializable {
 
-  def apply(sequence: MinHashableSequence,
+  def apply(sequence: Sequence,
             edges: Array[Edge[Overlap]]): LabelVertex = {
     LabelVertex(sequence,
                 startEdges = edges.filter(e => {
@@ -78,7 +79,7 @@ private[graph] case class Subsequence(from: VertexId,
                                       to: VertexId = -1L) {
 }
 
-private[graph] case class LabelVertex(sequence: MinHashableSequence,
+private[graph] case class LabelVertex(sequence: Sequence,
                                       sequences: Array[(VertexId,
                                                         Subsequence)] = Array.empty,
                                       startEdges: Array[Edge[Overlap]] = Array.empty,
@@ -282,7 +283,7 @@ object EmitAssembly extends Serializable {
     }
   }
 
-  def apply(graph: Graph[MinHashableSequence, Overlap]): RDD[NucleotideContigFragment] = {
+  def apply(graph: Graph[Sequence, Overlap]): RDD[NucleotideContigFragment] = {
     // get our edges
     val localEdges = graph.collectEdges(EdgeDirection.Either)
 

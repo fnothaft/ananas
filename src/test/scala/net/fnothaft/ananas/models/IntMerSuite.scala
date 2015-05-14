@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.fnothaft.ananas.graph
+package net.fnothaft.ananas.models
 
 import org.scalatest.FunSuite
 
@@ -40,9 +40,8 @@ class IntMerSuite extends FunSuite {
 
     assert(kmer.kmer === 0x1111EEEE)
     assert(kmer.mask === 0x0)
-    assert(kmer.rcKmer === 0x4444BBBB)
-    assert(kmer.rcMask === 0x0)
     assert(kmer.toString === "ACACACACTGTGTGTG")
+    assert(kmer.isOriginal)
   }
 
   test("build a masked k-mer") {
@@ -50,9 +49,8 @@ class IntMerSuite extends FunSuite {
 
     assert(kmer.kmer === 0x1111EECE)
     assert(kmer.mask === 0x30)
-    assert(kmer.rcKmer === 0x4C44BBBB)
-    assert(kmer.rcMask === 0xC000000)
     assert(kmer.toString === "ACACACACTGTGTNTG")
+    assert(kmer.isOriginal)
   }
 
   test("compare compatible proper and masked k-mers") {
@@ -66,8 +64,10 @@ class IntMerSuite extends FunSuite {
     val kmer = IntMer("ACACACACTGTGTGTG")
     val rmer = IntMer("CACACACAGTGTGTGT")
 
-    assert(kmer.isCanonical)
-    assert(!rmer.isCanonical)
+    assert(kmer.isOriginal)
+    assert(!rmer.isOriginal)
+    assert(kmer.kmer === rmer.kmer)
+    assert(kmer.mask === rmer.mask)
     assert(kmer.equals(rmer))
   }
 
