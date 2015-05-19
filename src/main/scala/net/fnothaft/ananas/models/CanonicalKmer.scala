@@ -15,6 +15,25 @@
  */
 package net.fnothaft.ananas.models
 
+import net.fnothaft.ananas.avro.{ Backing, Kmer }
+import org.apache.spark.rdd.RDD
+
+object CanonicalKmer extends Serializable {
+
+  def apply(kmer: Kmer): CanonicalKmer = kmer.getFormat match {
+    case Backing.INT => {
+      IntMer(kmer.getIntKmer,
+             kmer.getIntMask,
+             kmer.getIsOriginal)
+    }
+    case _ => throw new IllegalArgumentException("Received illegal k-mer: %s.".format(kmer))
+  }
+
+  def apply(rdd: RDD[Kmer]): RDD[CanonicalKmer] = {
+    rdd.map(CanonicalKmer(_))
+  }
+}
+
 trait CanonicalKmer {
 
   val isOriginal: Boolean
@@ -26,4 +45,6 @@ trait CanonicalKmer {
   def toOriginalString: String
 
   def longHash: Long
+
+  def toAvro: Kmer
 }

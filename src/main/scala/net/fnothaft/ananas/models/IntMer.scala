@@ -15,6 +15,7 @@
  */
 package net.fnothaft.ananas.models
 
+import net.fnothaft.ananas.avro.{ Backing, Kmer }
 import scala.annotation.tailrec
 
 object IntMer {
@@ -136,6 +137,15 @@ case class IntMer(kmer: Int,
                   isOriginal: Boolean) extends CanonicalKmer {
 
   def kmerLength: Int = 16
+
+  def toAvro: Kmer = {
+    Kmer.newBuilder()
+      .setFormat(Backing.INT)
+      .setIsOriginal(isOriginal)
+      .setIntKmer(kmer)
+      .setIntMask(mask)
+      .build()
+  }
   
   def flipCanonicality: IntMer = {
     @tailrec def flip(k: Int,

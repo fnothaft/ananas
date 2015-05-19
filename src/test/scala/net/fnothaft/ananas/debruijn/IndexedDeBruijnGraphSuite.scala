@@ -15,6 +15,7 @@
  */
 package net.fnothaft.ananas.debruijn
 
+import java.nio.file.Files
 import net.fnothaft.ananas.AnanasFunSuite
 import net.fnothaft.ananas.models.{ CanonicalKmer, Fragment, IntMer }
 
@@ -72,5 +73,32 @@ class IndexedDeBruijnGraphSuite extends AnanasFunSuite {
       .map(_._2)
       .distinct
       .count === 2)
+  }
+
+  sparkTest("saving and loading a graph should not change the results") {
+    
+    val fragment0 = Fragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
+      .map(_.asInstanceOf[CanonicalKmer])))
+    val fragment1 = Fragment(1L, Array(IntMer.fromSequence("TCTTCCTAGTGTCACATGTGTGCATG")
+      .map(_.asInstanceOf[CanonicalKmer])))
+    val fragment2 = Fragment(2L, Array(IntMer.fromSequence("CCTAGTGTCACATGTGTGCATGGGAC")
+      .map(_.asInstanceOf[CanonicalKmer])))
+
+    val dbg = IndexedDeBruijnGraph.buildFromFragments(sc.parallelize(Seq(fragment0,
+                                                                         fragment1,
+                                                                         fragment2)))
+
+    val tempFile = Files.createTempDirectory("graph")
+    IndexedDeBruijnGraph.saveToFile(tempFile.toAbsolutePath.toString + "/graph",
+                                    dbg)
+    dbg.unpersist()
+    val graph = IndexedDeBruijnGraph.loadFromFile(sc, tempFile.toAbsolutePath.toString + "/graph")
+
+    assert(graph.vertices.count === 19)
+    assert(graph.connectedComponents()
+      .vertices
+      .map(_._2)
+      .distinct
+      .count === 1)
   }
 }

@@ -15,10 +15,17 @@
  */
 package net.fnothaft.ananas.debruijn
 
+import net.fnothaft.ananas.avro.KmerVertex
 import net.fnothaft.ananas.models.{ CanonicalKmer, Fragment }
 import org.apache.spark.SparkContext._
-import org.apache.spark.graphx.Graph
+import org.apache.spark.SparkContext
+import org.apache.spark.graphx.{ Edge, Graph }
 import org.apache.spark.rdd.RDD
+import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.util.HadoopUtil
+import parquet.avro.AvroReadSupport
+import parquet.hadoop.ParquetInputFormat
+import parquet.hadoop.util.ContextUtil
 import scala.annotation.tailrec
 
 object IndexedDeBruijnGraph extends Serializable {
@@ -83,5 +90,38 @@ object IndexedDeBruijnGraph extends Serializable {
     kmers.unpersist()
 
     graph
+  }
+
+  def loadFromFile(sc: SparkContext,
+                   filepath: String): Graph[IndexedKmerVertex, Unit] = {
+
+    val job = HadoopUtil.newJob(sc)
+    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[KmerVertex]])
+    val rawVertices = sc.newAPIHadoopFile(filepath,
+      classOf[ParquetInputFormat[KmerVertex]],
+      classOf[Void],
+      classOf[KmerVertex],
+      ContextUtil.getConfiguration(job)
+    ).map(kv => IndexedKmerVertex(kv._2))
+
+    // map vertices into an RDD
+    val vertexRdd = rawVertices.keyBy(_.kmer.longHash)
+
+    // map vertices to edges
+    val edgeRdd = vertexRdd.flatMap(kv => {
+      val (id, vertex) = kv
+
+      (vertex.stronglyConnected.values ++ vertex.linked.values)
+        .map(v => new Edge[Unit](id, v))
+    })
+    
+    Graph(vertexRdd, edgeRdd)
+  }
+
+  def saveToFile(filepath: String,
+                 graph: Graph[IndexedKmerVertex, Unit]) {
+    graph.vertices
+      .map(_._2.toAvro)
+      .adamParquetSave(filepath)
   }
 }
