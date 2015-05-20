@@ -15,7 +15,7 @@
  */
 package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.avro.KmerVertex
+import net.fnothaft.ananas.avro.AvroKmerVertex
 import net.fnothaft.ananas.models.{ CanonicalKmer, Fragment }
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkContext
@@ -96,11 +96,11 @@ object IndexedDeBruijnGraph extends Serializable {
                    filepath: String): Graph[IndexedKmerVertex, Unit] = {
 
     val job = HadoopUtil.newJob(sc)
-    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[KmerVertex]])
+    ParquetInputFormat.setReadSupportClass(job, classOf[AvroReadSupport[AvroKmerVertex]])
     val rawVertices = sc.newAPIHadoopFile(filepath,
-      classOf[ParquetInputFormat[KmerVertex]],
+      classOf[ParquetInputFormat[AvroKmerVertex]],
       classOf[Void],
-      classOf[KmerVertex],
+      classOf[AvroKmerVertex],
       ContextUtil.getConfiguration(job)
     ).map(kv => IndexedKmerVertex(kv._2))
 

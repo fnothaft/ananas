@@ -15,7 +15,7 @@
  */
 package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.avro.KmerVertex
+import net.fnothaft.ananas.avro.AvroKmerVertex
 import net.fnothaft.ananas.models.CanonicalKmer
 import org.apache.spark.rdd.RDD
 import scala.collection.JavaConversions._
@@ -32,7 +32,7 @@ private[debruijn] object IndexedKmerVertex extends Serializable {
     })
   }
 
-  def apply(vertex: KmerVertex): IndexedKmerVertex = {
+  def apply(vertex: AvroKmerVertex): IndexedKmerVertex = {
     def long(l: java.lang.Long): Long = l
     def int(i: java.lang.Integer): Int = i
 
@@ -61,7 +61,7 @@ case class IndexedKmerVertex(kmer: CanonicalKmer,
                              stronglyConnected: Map[(Long, Int), Long],
                              linked: Map[(Long, Int), Long]) {
 
-  def toAvro: KmerVertex = {
+  def toAvro: AvroKmerVertex = {
     val tb = terminals.toBuffer
     val scb = stronglyConnected.toBuffer
     val lb = linked.toBuffer
@@ -69,7 +69,7 @@ case class IndexedKmerVertex(kmer: CanonicalKmer,
     def long(l: Long): java.lang.Long = l
     def int(i: Int): java.lang.Integer = i
     
-    KmerVertex.newBuilder()
+    AvroKmerVertex.newBuilder()
       .setKmer(kmer.toAvro)
       .setTerminalIds(bufferAsJavaList(tb.map(v => long(v._1))))
       .setTerminalIdx(bufferAsJavaList(tb.map(v => int(v._2))))

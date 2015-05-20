@@ -30,7 +30,7 @@ protocol Ananas {
     union { null, int } intMask = null;
   }
 
-  record KmerVertex {
+  record AvroKmerVertex {
     Kmer kmer;
 
     array<long> terminalIds = {};
