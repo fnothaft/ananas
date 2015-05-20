@@ -15,14 +15,15 @@
  */
 package net.fnothaft.ananas.graph
 
-import net.fnothaft.ananas.overlapping.{ MinHashableSequence, Overlap, Position }
+import net.fnothaft.ananas.models.Sequence
+import net.fnothaft.ananas.overlapping.{ Overlap, Position }
 import org.apache.spark.graphx._
 import scala.annotation.tailrec
 import scala.math.{ max, min }
 
 // this class exists because graphx's joinVertices operator requires
 // the graph to have the same _vertex_ types after the join! frustrating.
-private[graph] case class VertexWithEdges(v: MinHashableSequence,
+private[graph] case class VertexWithEdges(v: Sequence,
                                           edges: Array[Edge[Overlap]] = Array.empty,
                                           keepEdges: Set[VertexId] = Set.empty) {
 
@@ -42,7 +43,7 @@ private[graph] case class VertexWithEdges(v: MinHashableSequence,
 
 object TransitiveReduction extends Serializable {
 
-  def apply(graph: Graph[MinHashableSequence, Overlap]): Graph[MinHashableSequence, Overlap] = {
+  def apply(graph: Graph[Sequence, Overlap]): Graph[Sequence, Overlap] = {
     // get our edges
     val localEdges = graph.collectEdges(EdgeDirection.Either)
 

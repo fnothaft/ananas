@@ -15,7 +15,8 @@
  */
 package net.fnothaft.ananas.graph
 
-import net.fnothaft.ananas.overlapping.{ MinHashableSequence, Overlap, Position }
+import net.fnothaft.ananas.models.{ CanonicalKmer, IntMer, Sequence }
+import net.fnothaft.ananas.overlapping.{ Overlap, Position }
 import org.apache.spark.SparkContext._
 import org.apache.spark.graphx._
 import org.apache.spark.rdd.RDD
@@ -32,7 +33,7 @@ private[graph] case class InitMsg() extends Msg {
 private[graph] case class LabelMsg(id: VertexId,
                                    hop: Int,
                                    switchStrands: Boolean,
-                                   kmer: IntMer,
+                                   kmer: CanonicalKmer,
                                    pos: Position,
                                    from: VertexId) extends Msg {
 }
@@ -46,7 +47,7 @@ private[graph] case class RelabelMsg(id: VertexId,
 
 private[graph] object LabelVertex extends Serializable {
 
-  def apply(sequence: MinHashableSequence,
+  def apply(sequence: Sequence,
             edges: Array[Edge[Overlap]]): LabelVertex = {
     LabelVertex(sequence,
                 startEdges = edges.filter(e => {
@@ -73,12 +74,12 @@ private[graph] object LabelVertex extends Serializable {
 }
 
 private[graph] case class Subsequence(from: VertexId,
-                                      sequence: Array[IntMer],
+                                      sequence: Array[CanonicalKmer],
                                       round: Int,
                                       to: VertexId = -1L) {
 }
 
-private[graph] case class LabelVertex(sequence: MinHashableSequence,
+private[graph] case class LabelVertex(sequence: Sequence,
                                       sequences: Array[(VertexId,
                                                         Subsequence)] = Array.empty,
                                       startEdges: Array[Edge[Overlap]] = Array.empty,
@@ -94,10 +95,10 @@ private[graph] case class LabelVertex(sequence: MinHashableSequence,
 
 object EmitAssembly extends Serializable {
 
-  private def trimEnd(a: Array[IntMer],
+  private def trimEnd(a: Array[CanonicalKmer],
                       switchesStrands: Boolean,
-                      startKmer: IntMer,
-                      endKmer: IntMer): Array[IntMer] = {
+                      startKmer: CanonicalKmer,
+                      endKmer: CanonicalKmer): Array[CanonicalKmer] = {
     if (switchesStrands) {
       a.takeWhile(_ != startKmer)
     } else {
@@ -105,19 +106,15 @@ object EmitAssembly extends Serializable {
     }
   }
 
-  private def trimStart(a: Array[IntMer],
+  private def trimStart(a: Array[CanonicalKmer],
                         switchesStrands: Boolean,
-                        startKmer: IntMer,
-                        endKmer: IntMer): Array[IntMer] = {
+                        startKmer: CanonicalKmer,
+                        endKmer: CanonicalKmer): Array[CanonicalKmer] = {
     if (switchesStrands) {
       a.dropWhile(_ != endKmer)
     } else {
       a.dropWhile(_ != startKmer)
     }
-  }
-
-  private def flip(a: Array[IntMer]): Array[IntMer] = {
-    a.map(_.flipCanonicality).reverse
   }
 
   private def vprog(vid: VertexId,
@@ -282,7 +279,7 @@ object EmitAssembly extends Serializable {
     }
   }
 
-  def apply(graph: Graph[MinHashableSequence, Overlap]): RDD[NucleotideContigFragment] = {
+  def apply(graph: Graph[Sequence, Overlap]): RDD[NucleotideContigFragment] = {
     // get our edges
     val localEdges = graph.collectEdges(EdgeDirection.Either)
 
@@ -314,7 +311,7 @@ object EmitAssembly extends Serializable {
           .setContig(Contig.newBuilder()
           .setContigName("contig_%d".format(ctgId))
           .build())
-          .setFragmentSequence(IntMer.toSequence(ctg))
+          .setFragmentSequence(IntMer.toSequence(ctg.map(_.asInstanceOf[IntMer])))
           .build()
       })
 

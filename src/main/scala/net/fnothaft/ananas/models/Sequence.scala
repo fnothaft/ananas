@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.fnothaft.ananas.overlapping
+package net.fnothaft.ananas.models
 
-import net.fnothaft.ananas.graph.IntMer
 import org.bdgenomics.formats.avro.AlignmentRecord
 import org.bdgenomics.utils.minhash.MinHashable
 
-object MinHashableSequence extends Serializable {
+object Sequence extends Serializable {
 
-  private[overlapping] def apply(readWithId: (AlignmentRecord, Long)): MinHashableSequence = {
-    MinHashableSequence(readWithId._2, IntMer.fromSequence(readWithId._1.getSequence))
+  def apply(readWithId: (AlignmentRecord, Long)): Sequence = {
+    Sequence(readWithId._2, IntMer.fromSequence(readWithId._1.getSequence).map(_.asInstanceOf[CanonicalKmer]))
   }
 }
 
-case class MinHashableSequence(id: Long,
-                               sequenceKmers: Array[IntMer]) extends MinHashable {
+case class Sequence(id: Long,
+                    sequenceKmers: Array[CanonicalKmer],
+                    name: Option[String] = None) extends MinHashable {
 
   val length = sequenceKmers.length + 15
 
