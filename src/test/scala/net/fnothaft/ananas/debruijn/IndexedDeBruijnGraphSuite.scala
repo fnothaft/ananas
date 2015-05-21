@@ -17,13 +17,13 @@ package net.fnothaft.ananas.debruijn
 
 import java.nio.file.Files
 import net.fnothaft.ananas.AnanasFunSuite
-import net.fnothaft.ananas.models.{ CanonicalKmer, Fragment, IntMer }
+import net.fnothaft.ananas.models.{ CanonicalKmer, ReadFragment, IntMer }
 
 class IndexedDeBruijnGraphSuite extends AnanasFunSuite {
 
   sparkTest("building a graph from a single read should give a single component") {
     
-    val fragment = Fragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
+    val fragment = ReadFragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
       .map(_.asInstanceOf[CanonicalKmer])))
 
     val dbg = IndexedDeBruijnGraph.buildFromFragments(sc.parallelize(Seq(fragment)))
@@ -38,11 +38,11 @@ class IndexedDeBruijnGraphSuite extends AnanasFunSuite {
 
   sparkTest("building a graph from reads that overlap should give a single component") {
     
-    val fragment0 = Fragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
+    val fragment0 = ReadFragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
       .map(_.asInstanceOf[CanonicalKmer])))
-    val fragment1 = Fragment(1L, Array(IntMer.fromSequence("TCTTCCTAGTGTCACATGTGTGCATG")
+    val fragment1 = ReadFragment(1L, Array(IntMer.fromSequence("TCTTCCTAGTGTCACATGTGTGCATG")
       .map(_.asInstanceOf[CanonicalKmer])))
-    val fragment2 = Fragment(2L, Array(IntMer.fromSequence("CCTAGTGTCACATGTGTGCATGGGAC")
+    val fragment2 = ReadFragment(2L, Array(IntMer.fromSequence("CCTAGTGTCACATGTGTGCATGGGAC")
       .map(_.asInstanceOf[CanonicalKmer])))
 
     val dbg = IndexedDeBruijnGraph.buildFromFragments(sc.parallelize(Seq(fragment0,
@@ -59,9 +59,9 @@ class IndexedDeBruijnGraphSuite extends AnanasFunSuite {
 
   sparkTest("building a graph from reads that are disjoint should yield two components") {
     
-    val fragment0 = Fragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
+    val fragment0 = ReadFragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
       .map(_.asInstanceOf[CanonicalKmer])))
-    val fragment1 = Fragment(1L, Array(IntMer.fromSequence("ACGGACATGTGCAACACATTGTGAAC")
+    val fragment1 = ReadFragment(1L, Array(IntMer.fromSequence("ACGGACATGTGCAACACATTGTGAAC")
       .map(_.asInstanceOf[CanonicalKmer])))
 
     val dbg = IndexedDeBruijnGraph.buildFromFragments(sc.parallelize(Seq(fragment0,
@@ -77,11 +77,11 @@ class IndexedDeBruijnGraphSuite extends AnanasFunSuite {
 
   sparkTest("saving and loading a graph should not change the results") {
     
-    val fragment0 = Fragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
+    val fragment0 = ReadFragment(0L, Array(IntMer.fromSequence("ACACTCTTCCTAGTGTCACATGTGTG")
       .map(_.asInstanceOf[CanonicalKmer])))
-    val fragment1 = Fragment(1L, Array(IntMer.fromSequence("TCTTCCTAGTGTCACATGTGTGCATG")
+    val fragment1 = ReadFragment(1L, Array(IntMer.fromSequence("TCTTCCTAGTGTCACATGTGTGCATG")
       .map(_.asInstanceOf[CanonicalKmer])))
-    val fragment2 = Fragment(2L, Array(IntMer.fromSequence("CCTAGTGTCACATGTGTGCATGGGAC")
+    val fragment2 = ReadFragment(2L, Array(IntMer.fromSequence("CCTAGTGTCACATGTGTGCATGGGAC")
       .map(_.asInstanceOf[CanonicalKmer])))
 
     val dbg = IndexedDeBruijnGraph.buildFromFragments(sc.parallelize(Seq(fragment0,

@@ -13,12 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.fnothaft.ananas.models
+package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.debruijn.TransientKmerVertex
+import net.fnothaft.ananas.avro.AvroKmerVertex
+import net.fnothaft.ananas.models.CanonicalKmer
+import org.apache.spark.rdd.RDD
 
-trait Fragment[L] extends Serializable {
-  val id: L
+trait KmerVertexCompanion[T <: KmerVertex, L] extends Serializable {
 
-  def flattenFragment: Array[(CanonicalKmer, TransientKmerVertex[L])]
+  def apply(vertex: AvroKmerVertex): T
+
+  def makeRdd(rdd: RDD[(CanonicalKmer, TransientKmerVertex[L])]): RDD[(Long, T)]
+}
+
+trait KmerVertex {
+  val kmer: CanonicalKmer
+  
+  def toAvro: AvroKmerVertex
+
+  def connectsTo: Iterable[Long]
 }

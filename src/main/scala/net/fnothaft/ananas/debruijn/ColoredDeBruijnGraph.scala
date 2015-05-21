@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package net.fnothaft.ananas.models
+package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.debruijn.TransientKmerVertex
+object ColoredDeBruijnGraph extends DeBruijnGraph[ColoredKmerVertex, String] {
 
-trait Fragment[L] extends Serializable {
-  val id: L
-
-  def flattenFragment: Array[(CanonicalKmer, TransientKmerVertex[L])]
+  val vertexCompanion = ColoredKmerVertex
 }
