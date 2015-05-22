@@ -30,13 +30,15 @@ protocol Ananas {
     union { null, int } intMask = null;
   }
 
-  record KmerVertex {
+  record AvroKmerVertex {
     Kmer kmer;
 
     array<long> terminalIds = {};
+    array<string> terminalNames = {};
     array<int> terminalIdx = {};
 
     array<long> scId = {};
+    array<string> scNames = {};
     array<int> scIdx = {};
     array<long> scLink = {};
 

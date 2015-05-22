@@ -21,15 +21,15 @@ import org.apache.spark.rdd.RDD
 
 object TransientKmerVertex extends Serializable {
 
-  private[debruijn] def merge(v1: TransientKmerVertex,
-                              v2: TransientKmerVertex): TransientKmerVertex = {
+  private[debruijn] def merge[T](v1: TransientKmerVertex[T],
+                                 v2: TransientKmerVertex[T]): TransientKmerVertex[T] = {
     
     TransientKmerVertex(v1.terminals ++ v2.terminals,
                         v1.stronglyConnected ++ v2.stronglyConnected,
                         v1.linked ++ v2.linked)
   }
 
-  private[debruijn] def toEdges(rdd: RDD[(CanonicalKmer, TransientKmerVertex)]): RDD[Edge[Unit]] = {
+  private[debruijn] def toEdges[T](rdd: RDD[(CanonicalKmer, TransientKmerVertex[T])]): RDD[Edge[Unit]] = {
     rdd.flatMap(kv => {
       val (kmer, vertex) = kv
       val srcId = kmer.longHash
@@ -42,7 +42,7 @@ object TransientKmerVertex extends Serializable {
   }
 }
 
-private[debruijn] case class TransientKmerVertex(terminals: Set[(Long, Int)] = Set.empty,
-                                                 stronglyConnected: Map[(Long, Int), Long] = Map.empty,
-                                                 linked: Map[(Long, Int), Long] = Map.empty) {
+case class TransientKmerVertex[T](terminals: Set[(T, Int)] = Set.empty[(T, Int)],
+                                  stronglyConnected: Map[(T, Int), Long] = Map.empty[(T, Int), Long],
+                                  linked: Map[(T, Int), Long] = Map.empty[(T, Int), Long]) {
 }
