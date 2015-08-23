@@ -42,9 +42,23 @@ trait CanonicalKmer {
 
   def lastBase: Char
   def originalLastBase: Char
-  def toOriginalString: String
+
+  def toOriginalString: String = {
+    if (isOriginal) {
+      toCanonicalString
+    } else {
+      toAntiCanonicalString
+    }
+  }
+
+  def toCanonicalString: String
+  def toAntiCanonicalString: String
 
   def longHash: Long
 
   def toAvro: Kmer
+
+  def flipCanonicality: CanonicalKmer
+
+  def sameExceptForOrientation(k: CanonicalKmer): Boolean
 }

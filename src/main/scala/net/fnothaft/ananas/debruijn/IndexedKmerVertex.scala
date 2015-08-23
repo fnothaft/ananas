@@ -15,7 +15,7 @@
  */
 package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.avro.AvroKmerVertex
+import net.fnothaft.ananas.avro.{ AvroKmerVertex, Link }
 import net.fnothaft.ananas.models.CanonicalKmer
 import org.apache.spark.rdd.RDD
 import scala.collection.JavaConversions._
@@ -26,9 +26,12 @@ private[debruijn] object IndexedKmerVertex extends KmerVertexCompanion[IndexedKm
     rdd.map(kv => {
       val (km, vertex) = kv
       (km.longHash, IndexedKmerVertex(km,
-                                      vertex.terminals,
-                                      vertex.stronglyConnected,
-                                      vertex.linked))
+                                      vertex.forwardTerminals,
+                                      vertex.forwardStronglyConnected,
+                                      vertex.forwardLinked,
+                                      vertex.reverseTerminals,
+                                      vertex.reverseStronglyConnected,
+                                      vertex.reverseLinked))
     })
   }
 
@@ -38,51 +41,102 @@ private[debruijn] object IndexedKmerVertex extends KmerVertexCompanion[IndexedKm
 
     val kmer = CanonicalKmer(vertex.getKmer)
 
-    val tb = asScalaBuffer(vertex.getTerminalIds).map(v => long(v))
-      .zip(asScalaBuffer(vertex.getTerminalIdx).map(v => int(v)))
-      .toSet
+    // build forward direction of k-mer
+    val fl = vertex.getForwardLink
+    val (ftb, fsc, flink) = if (fl != null) {
+      (asScalaBuffer(fl.getTerminalIds).map(v => long(v))
+      .zip(asScalaBuffer(fl.getTerminalIdx).map(v => int(v)))
+      .toSet, asScalaBuffer(fl.getScId).map(v => long(v))
+      .zip(asScalaBuffer(fl.getScIdx).map(v => int(v)))
+      .zip(asScalaBuffer(fl.getScLink).map(v => long(v)))
+      .toMap, asScalaBuffer(fl.getLinkId).map(v => long(v))
+      .zip(asScalaBuffer(fl.getLinkIdx).map(v => int(v)))
+      .zip(asScalaBuffer(fl.getLinkLink).map(v => long(v)))
+      .toMap)
+    } else {
+      (Set.empty[(Long, Int)],
+       Map.empty[(Long, Int), Long],
+       Map.empty[(Long, Int), Long])
+    }
 
-    val sc = asScalaBuffer(vertex.getScId).map(v => long(v))
-      .zip(asScalaBuffer(vertex.getScIdx).map(v => int(v)))
-      .zip(asScalaBuffer(vertex.getScLink).map(v => long(v)))
-      .toMap
+    // build reverse direction of k-mer
+    val rl = vertex.getReverseLink
+    val (rtb, rsc, rlink) = if (rl != null) {
+      (asScalaBuffer(rl.getTerminalIds).map(v => long(v))
+      .zip(asScalaBuffer(rl.getTerminalIdx).map(v => int(v)))
+      .toSet, asScalaBuffer(rl.getScId).map(v => long(v))
+      .zip(asScalaBuffer(rl.getScIdx).map(v => int(v)))
+      .zip(asScalaBuffer(rl.getScLink).map(v => long(v)))
+      .toMap, asScalaBuffer(rl.getLinkId).map(v => long(v))
+      .zip(asScalaBuffer(rl.getLinkIdx).map(v => int(v)))
+      .zip(asScalaBuffer(rl.getLinkLink).map(v => long(v)))
+      .toMap)
+    } else {
+      (Set.empty[(Long, Int)],
+       Map.empty[(Long, Int), Long],
+       Map.empty[(Long, Int), Long])
+    }
 
-    val link = asScalaBuffer(vertex.getLinkId).map(v => long(v))
-      .zip(asScalaBuffer(vertex.getLinkIdx).map(v => int(v)))
-      .zip(asScalaBuffer(vertex.getLinkLink).map(v => long(v)))
-      .toMap
-
-    new IndexedKmerVertex(kmer, tb, sc, link)
+    new IndexedKmerVertex(kmer, ftb, fsc, flink, rtb, rsc, rlink)
   }
 }
 
 case class IndexedKmerVertex(kmer: CanonicalKmer,
-                             terminals: Set[(Long, Int)],
-                             stronglyConnected: Map[(Long, Int), Long],
-                             linked: Map[(Long, Int), Long]) extends KmerVertex {
+                             forwardTerminals: Set[(Long, Int)],
+                             forwardStronglyConnected: Map[(Long, Int), Long],
+                             forwardLinked: Map[(Long, Int), Long],
+                             reverseTerminals: Set[(Long, Int)],
+                             reverseStronglyConnected: Map[(Long, Int), Long],
+                             reverseLinked: Map[(Long, Int), Long]) extends KmerVertex {
 
   def toAvro: AvroKmerVertex = {
-    val tb = terminals.toBuffer
-    val scb = stronglyConnected.toBuffer
-    val lb = linked.toBuffer
-
     def long(l: Long): java.lang.Long = l
     def int(i: Int): java.lang.Integer = i
     
-    AvroKmerVertex.newBuilder()
+    val builder = AvroKmerVertex.newBuilder()
       .setKmer(kmer.toAvro)
-      .setTerminalIds(bufferAsJavaList(tb.map(v => long(v._1))))
-      .setTerminalIdx(bufferAsJavaList(tb.map(v => int(v._2))))
-      .setScId(bufferAsJavaList(scb.map(v => long(v._1._1))))
-      .setScIdx(bufferAsJavaList(scb.map(v => int(v._1._2))))
-      .setScLink(bufferAsJavaList(scb.map(v => long(v._2))))
-      .setLinkId(bufferAsJavaList(lb.map(v => long(v._1._1))))
-      .setLinkIdx(bufferAsJavaList(lb.map(v => int(v._1._2))))
-      .setLinkLink(bufferAsJavaList(lb.map(v => long(v._2))))
-      .build()
+
+    // populate forward direction
+    val ftb = forwardTerminals.toBuffer
+    val fscb = forwardStronglyConnected.toBuffer
+    val flb = forwardLinked.toBuffer
+
+    if (ftb.nonEmpty || fscb.nonEmpty || flb.nonEmpty) {
+      builder.setForwardLink(Link.newBuilder()
+      .setTerminalIds(bufferAsJavaList(ftb.map(v => long(v._1))))
+      .setTerminalIdx(bufferAsJavaList(ftb.map(v => int(v._2))))
+      .setScId(bufferAsJavaList(fscb.map(v => long(v._1._1))))
+      .setScIdx(bufferAsJavaList(fscb.map(v => int(v._1._2))))
+      .setScLink(bufferAsJavaList(fscb.map(v => long(v._2))))
+      .setLinkId(bufferAsJavaList(flb.map(v => long(v._1._1))))
+      .setLinkIdx(bufferAsJavaList(flb.map(v => int(v._1._2))))
+      .setLinkLink(bufferAsJavaList(flb.map(v => long(v._2))))
+      .build())
+    }
+
+    // populate reverse direction
+    val rtb = reverseTerminals.toBuffer
+    val rscb = reverseStronglyConnected.toBuffer
+    val rlb = reverseLinked.toBuffer
+
+    if (rtb.nonEmpty || rscb.nonEmpty || rlb.nonEmpty) {
+      builder.setReverseLink(Link.newBuilder()
+      .setTerminalIds(bufferAsJavaList(rtb.map(v => long(v._1))))
+      .setTerminalIdx(bufferAsJavaList(rtb.map(v => int(v._2))))
+      .setScId(bufferAsJavaList(rscb.map(v => long(v._1._1))))
+      .setScIdx(bufferAsJavaList(rscb.map(v => int(v._1._2))))
+      .setScLink(bufferAsJavaList(rscb.map(v => long(v._2))))
+      .setLinkId(bufferAsJavaList(rlb.map(v => long(v._1._1))))
+      .setLinkIdx(bufferAsJavaList(rlb.map(v => int(v._1._2))))
+      .setLinkLink(bufferAsJavaList(rlb.map(v => long(v._2))))
+      .build())
+    }
+
+    builder.build()
   }
 
   def connectsTo: Iterable[Long] = {
-    stronglyConnected.values ++ linked.values
+    forwardStronglyConnected.values ++ forwardLinked.values ++
+    reverseStronglyConnected.values ++ reverseLinked.values
   }
 }

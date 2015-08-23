@@ -146,8 +146,21 @@ case class IntMer(kmer: Int,
       .setIntMask(mask)
       .build()
   }
+
+  def sameExceptForOrientation(k: CanonicalKmer): Boolean = k match {
+    case imer: IntMer => {
+      println("comparing " + toString + " to " + imer)
+      println(imer.kmer + " == " + kmer + " is " + (imer.kmer == kmer))
+      println(imer.mask + " == " + mask + " is " + (imer.mask == mask))
+      imer.kmer == kmer && imer.mask == mask
+    }
+    case _ => {
+      println("no match")
+      false
+    }
+  }
   
-  def flipCanonicality: IntMer = {
+  def flipCanonicality: CanonicalKmer = {
     @tailrec def flip(k: Int,
                       m: Int,
                       nk: Int = 0,
@@ -156,7 +169,7 @@ case class IntMer(kmer: Int,
       if (i <= 0) {
         (~nk, nm)
       } else {
-        flip(k >>> 2, m >>> 2, (nk << 2) | (k & 0x3), (nm << 2) | (m & 0x3))
+        flip(k >>> 2, m >>> 2, (nk << 2) | (k & 0x3), (nm << 2) | (m & 0x3), i - 1)
       }
     }
 
@@ -200,8 +213,7 @@ case class IntMer(kmer: Int,
     }
   }
 
-
-  override def toString: String = {
+  def toCanonicalString: String = {
     @tailrec def buildString(shiftKmer: Int,
                              shiftMask: Int,
                              a: Array[Char],
@@ -217,10 +229,7 @@ case class IntMer(kmer: Int,
     buildString(kmer, mask, new Array[Char](16))
   }
 
-  def toOriginalString: String = {
-    if (isOriginal) {
-      toString
-    } else {
+  def toAntiCanonicalString: String = {
       @tailrec def buildRcString(shiftKmer: Int,
                                  shiftMask: Int,
                                  a: Array[Char],
@@ -235,7 +244,9 @@ case class IntMer(kmer: Int,
 
       buildRcString(kmer, mask, new Array[Char](16))      
     }
-  }
+
+
+  override def toString: String = toCanonicalString
 
   def lastBase: Char = {
     getBase(kmer, mask)

@@ -18,6 +18,10 @@ package net.fnothaft.ananas.debruijn
 import java.nio.file.Files
 import net.fnothaft.ananas.AnanasFunSuite
 import net.fnothaft.ananas.models.{ CanonicalKmer, ContigFragment, IntMer }
+import org.apache.spark.SparkContext._
+import org.apache.spark.graphx.Graph
+import org.apache.spark.rdd.RDD
+import org.bdgenomics.adam.models.DNAAlphabet
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
 
 class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
@@ -113,5 +117,42 @@ class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
       .map(_._2)
       .distinct
       .count === 1)
+  }
+
+  def getVertexKmerCounts(graph: Graph[ColoredKmerVertex, Unit]): RDD[(String, Int)] = {
+    val km = graph.vertices.flatMap(v => {
+      val fwdKmerCount = v._2.forwardTerminals.size + v._2.forwardStronglyConnected.size
+      val revKmerCount = v._2.reverseTerminals.size + v._2.reverseStronglyConnected.size
+
+      Seq((v._2.kmer.toCanonicalString, fwdKmerCount),
+          (v._2.kmer.toAntiCanonicalString, revKmerCount))
+    }).cache
+    km.filter(_._2 != 0)
+  }
+
+  sparkTest("build graph from contig file") {
+    val file = ClassLoader.getSystemClassLoader.getResource("contigs.fa").getFile
+
+    val fragments = ContigFragment.loadFromFile(sc, file)
+    val dbg = ColoredDeBruijnGraph.buildFromFragments(fragments).cache()
+
+    val kmers = dbg.vertices.map(v => v._2.kmer.toOriginalString).cache
+    val textKmers = sc.textFile(file).filter(!_.startsWith(">")).flatMap(_.sliding(16))
+
+    val textCount = textKmers.countByValue()
+    val graphCount = getVertexKmerCounts(dbg).collectAsMap
+
+    var missing = List[String]()
+
+    textCount.foreach(p => {
+      val (kmer, count) = p
+      assert(graphCount.contains(kmer))
+      assert(graphCount(kmer) === count)
+    })
+    graphCount.foreach(p => {
+      val (kmer, count) = p
+      assert(textCount.contains(kmer))
+      assert(textCount(kmer) === count)
+    })
   }
 }
