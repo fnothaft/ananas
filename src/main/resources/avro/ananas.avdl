@@ -30,9 +30,7 @@ protocol Ananas {
     union { null, int } intMask = null;
   }
 
-  record AvroKmerVertex {
-    Kmer kmer;
-
+  record Link {
     array<long> terminalIds = {};
     array<string> terminalNames = {};
     array<int> terminalIdx = {};
@@ -45,5 +43,11 @@ protocol Ananas {
     array<long> linkId = {};
     array<int> linkIdx = {};
     array<long> linkLink = {};
+  }
+
+  record AvroKmerVertex {
+    Kmer kmer;
+    union { null, Link } forwardLink = null;
+    union { null, Link } reverseLink = null;
   }
 }

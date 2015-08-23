@@ -15,7 +15,7 @@
  */
 package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.models.CanonicalKmer
+import net.fnothaft.ananas.models.{ CanonicalKmer, IntMer}
 import org.apache.spark.graphx.Edge
 import org.apache.spark.rdd.RDD
 
@@ -24,9 +24,39 @@ object TransientKmerVertex extends Serializable {
   private[debruijn] def merge[T](v1: TransientKmerVertex[T],
                                  v2: TransientKmerVertex[T]): TransientKmerVertex[T] = {
     
-    TransientKmerVertex(v1.terminals ++ v2.terminals,
-                        v1.stronglyConnected ++ v2.stronglyConnected,
-                        v1.linked ++ v2.linked)
+    TransientKmerVertex(v1.forwardTerminals ++ v2.forwardTerminals,
+                        v1.forwardStronglyConnected ++ v2.forwardStronglyConnected,
+                        v1.forwardLinked ++ v2.forwardLinked,
+                        v1.reverseTerminals ++ v2.reverseTerminals,
+                        v1.reverseStronglyConnected ++ v2.reverseStronglyConnected,
+                        v1.reverseLinked ++ v2.reverseLinked)
+  }
+
+  private[debruijn] def mergeCanon[T](k1: CanonicalKmer,
+                                      v1: TransientKmerVertex[T],
+                                      k2: CanonicalKmer,
+                                      v2: TransientKmerVertex[T]): (CanonicalKmer,
+                                                                    TransientKmerVertex[T]) = {
+    val i1 = k1.asInstanceOf[IntMer]
+    val i2 = k2.asInstanceOf[IntMer]
+    assert(k1.sameExceptForOrientation(k2),
+           "Asked to merge %s and %s, which are not canonical twins. I1: %d %d %s, I2: %d %d %s.".format(
+      k1, k2,
+      i1.kmer, i1.mask, i1.isOriginal,
+      i2.kmer, i2.mask, i2.isOriginal))
+
+    val (fwdKmer, fwdVertex, revVertex) = if (k1.isOriginal) {
+      (k1, v1, v2)
+    } else {
+      (k2, v2, v1)
+    }
+
+    (fwdKmer, TransientKmerVertex(fwdVertex.forwardTerminals ++ revVertex.reverseTerminals,
+                                  fwdVertex.forwardStronglyConnected ++ revVertex.reverseStronglyConnected,
+                                  fwdVertex.forwardLinked ++ revVertex.reverseLinked,
+                                  fwdVertex.reverseTerminals ++ revVertex.forwardTerminals,
+                                  fwdVertex.reverseStronglyConnected ++ revVertex.forwardStronglyConnected,
+                                  fwdVertex.reverseLinked ++ revVertex.forwardLinked))
   }
 
   private[debruijn] def toEdges[T](rdd: RDD[(CanonicalKmer, TransientKmerVertex[T])]): RDD[Edge[Unit]] = {
@@ -35,14 +65,18 @@ object TransientKmerVertex extends Serializable {
       val srcId = kmer.longHash
 
       // merge map values and eliminate dupes
-      (vertex.stronglyConnected.values ++ vertex.linked.values)
+      (vertex.forwardStronglyConnected.values ++ vertex.forwardLinked.values ++
+       vertex.reverseStronglyConnected.values ++ vertex.reverseLinked.values)
         .toSet
         .map((v: Long) => (new Edge[Unit](srcId, v)))
     })
   }
 }
 
-case class TransientKmerVertex[T](terminals: Set[(T, Int)] = Set.empty[(T, Int)],
-                                  stronglyConnected: Map[(T, Int), Long] = Map.empty[(T, Int), Long],
-                                  linked: Map[(T, Int), Long] = Map.empty[(T, Int), Long]) {
+case class TransientKmerVertex[T](forwardTerminals: Set[(T, Int)] = Set.empty[(T, Int)],
+                                  forwardStronglyConnected: Map[(T, Int), Long] = Map.empty[(T, Int), Long],
+                                  forwardLinked: Map[(T, Int), Long] = Map.empty[(T, Int), Long],
+                                  reverseTerminals: Set[(T, Int)] = Set.empty[(T, Int)],
+                                  reverseStronglyConnected: Map[(T, Int), Long] = Map.empty[(T, Int), Long],
+                                  reverseLinked: Map[(T, Int), Long] = Map.empty[(T, Int), Long]) {
 }

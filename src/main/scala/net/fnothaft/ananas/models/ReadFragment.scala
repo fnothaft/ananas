@@ -90,17 +90,17 @@ case class ReadFragment(id: Long,
                          sequencesIter: Iterator[Array[CanonicalKmer]],
                          idx: Int = 0) {
       if (!sequenceIter.hasNext && !sequencesIter.hasNext) {
-        array(idx) = (kmer, TransientKmerVertex[Long](terminals = Set((id, idx))))
+        array(idx) = (kmer, TransientKmerVertex[Long](forwardTerminals = Set((id, idx))))
       } else {
         val (nk, nsi) = if (sequenceIter.hasNext) {
           val nextKmer = sequenceIter.next
-          array(idx) = (kmer, TransientKmerVertex[Long](stronglyConnected = Map(((id, idx) -> nextKmer.longHash))))
+          array(idx) = (kmer, TransientKmerVertex[Long](forwardStronglyConnected = Map(((id, idx) -> nextKmer.longHash))))
 
           (nextKmer, sequenceIter)
         } else {
           val nextSequence = sequencesIter.next
           val nextKmer = nextSequence.head
-          array(idx) = (kmer, TransientKmerVertex[Long](linked = Map(((id, idx) -> nextKmer.longHash))))
+          array(idx) = (kmer, TransientKmerVertex[Long](forwardLinked = Map(((id, idx) -> nextKmer.longHash))))
 
           (nextKmer, nextSequence.toIterator.drop(1))
         }

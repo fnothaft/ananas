@@ -15,10 +15,10 @@
  */
 package net.fnothaft.ananas.models
 
+import net.fnothaft.ananas.AnanasFunSuite
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
-import org.scalatest.FunSuite
 
-class ContigFragmentSuite extends FunSuite {
+class ContigFragmentSuite extends AnanasFunSuite {
 
   def c(s: String): CanonicalKmer = {
     IntMer(s).asInstanceOf[CanonicalKmer]
@@ -52,19 +52,19 @@ class ContigFragmentSuite extends FunSuite {
 
     assert(flat.length === 7)
     assert(flat(0)._1 === c("ACACTGTGGGTACACT"))
-    assert(flat(0)._2.stronglyConnected(("ctg", 0)) === c("CACTGTGGGTACACTA").longHash)
+    assert(flat(0)._2.forwardStronglyConnected(("ctg", 0)) === c("CACTGTGGGTACACTA").longHash)
     assert(flat(1)._1 === c("CACTGTGGGTACACTA"))
-    assert(flat(1)._2.stronglyConnected(("ctg", 1)) === c("ACTGTGGGTACACTAC").longHash)
+    assert(flat(1)._2.forwardStronglyConnected(("ctg", 1)) === c("ACTGTGGGTACACTAC").longHash)
     assert(flat(2)._1 === c("ACTGTGGGTACACTAC"))
-    assert(flat(2)._2.stronglyConnected(("ctg", 2)) === c("CTGTGGGTACACTACG").longHash)
+    assert(flat(2)._2.forwardStronglyConnected(("ctg", 2)) === c("CTGTGGGTACACTACG").longHash)
     assert(flat(3)._1 === c("CTGTGGGTACACTACG"))
-    assert(flat(3)._2.stronglyConnected(("ctg", 3)) === c("TGTGGGTACACTACGA").longHash)
+    assert(flat(3)._2.forwardStronglyConnected(("ctg", 3)) === c("TGTGGGTACACTACGA").longHash)
     assert(flat(4)._1 === c("TGTGGGTACACTACGA"))
-    assert(flat(4)._2.stronglyConnected(("ctg", 4)) === c("GTGGGTACACTACGAG").longHash)
+    assert(flat(4)._2.forwardStronglyConnected(("ctg", 4)) === c("GTGGGTACACTACGAG").longHash)
     assert(flat(5)._1 === c("GTGGGTACACTACGAG"))
-    assert(flat(5)._2.stronglyConnected(("ctg", 5)) === c("TGGGTACACTACGAGA").longHash)
+    assert(flat(5)._2.forwardStronglyConnected(("ctg", 5)) === c("TGGGTACACTACGAGA").longHash)
     assert(flat(6)._1 === c("TGGGTACACTACGAGA"))
-    assert(flat(6)._2.terminals(("ctg", 6)))
+    assert(flat(6)._2.forwardTerminals(("ctg", 6)))
   }
 
   test("build and flatten a fragment from a NCF from the middle of a contig") {
@@ -96,16 +96,41 @@ class ContigFragmentSuite extends FunSuite {
 
     assert(flat.length === 6)
     assert(flat(0)._1 === c("ACACTGTGGGTACACT"))
-    assert(flat(0)._2.stronglyConnected(("ctg", 20)) === c("CACTGTGGGTACACTA").longHash)
+    assert(flat(0)._2.forwardStronglyConnected(("ctg", 20)) === c("CACTGTGGGTACACTA").longHash)
     assert(flat(1)._1 === c("CACTGTGGGTACACTA"))
-    assert(flat(1)._2.stronglyConnected(("ctg", 21)) === c("ACTGTGGGTACACTAC").longHash)
+    assert(flat(1)._2.forwardStronglyConnected(("ctg", 21)) === c("ACTGTGGGTACACTAC").longHash)
     assert(flat(2)._1 === c("ACTGTGGGTACACTAC"))
-    assert(flat(2)._2.stronglyConnected(("ctg", 22)) === c("CTGTGGGTACACTACG").longHash)
+    assert(flat(2)._2.forwardStronglyConnected(("ctg", 22)) === c("CTGTGGGTACACTACG").longHash)
     assert(flat(3)._1 === c("CTGTGGGTACACTACG"))
-    assert(flat(3)._2.stronglyConnected(("ctg", 23)) === c("TGTGGGTACACTACGA").longHash)
+    assert(flat(3)._2.forwardStronglyConnected(("ctg", 23)) === c("TGTGGGTACACTACGA").longHash)
     assert(flat(4)._1 === c("TGTGGGTACACTACGA"))
-    assert(flat(4)._2.stronglyConnected(("ctg", 24)) === c("GTGGGTACACTACGAG").longHash)
+    assert(flat(4)._2.forwardStronglyConnected(("ctg", 24)) === c("GTGGGTACACTACGAG").longHash)
     assert(flat(5)._1 === c("GTGGGTACACTACGAG"))
-    assert(flat(5)._2.stronglyConnected(("ctg", 25)) === c("TGGGTACACTACGAGA").longHash)
+    assert(flat(5)._2.forwardStronglyConnected(("ctg", 25)) === c("TGGGTACACTACGAGA").longHash)
+  }
+
+  sparkTest("load k-mers from file") {
+    val file = ClassLoader.getSystemClassLoader.getResource("contigs.fa").getFile
+
+    val fragments = ContigFragment.loadFromFile(sc, file)
+    val textKmers = sc.textFile(file).filter(!_.startsWith(">")).flatMap(_.sliding(16))
+
+    assert(fragments.count === 2)
+    
+    val kmers = fragments.flatMap(_.flattenFragment)
+
+    assert(kmers.count === (48 + 49 - 32 + 2))
+    assert(kmers.count === textKmers.count)
+    assert(kmers.map(_._1).distinct.count === textKmers.distinct.count)
+
+    val fragment1 = fragments.filter(_.id == "ctg1").first
+    val text1 = sc.textFile(file).filter(!_.startsWith(">")).filter(_.contains("G")).first
+
+    assert(IntMer.toSequence(fragment1.sequence.map(_.asInstanceOf[IntMer])) === text1)
+
+    val fragment2 = fragments.filter(_.id == "ctg2").first
+    val text2 = sc.textFile(file).filter(!_.startsWith(">")).filter(!_.contains("G")).first
+
+    assert(IntMer.toSequence(fragment2.sequence.map(_.asInstanceOf[IntMer])) === text2)
   }
 }

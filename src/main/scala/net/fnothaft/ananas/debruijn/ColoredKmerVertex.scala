@@ -15,7 +15,7 @@
  */
 package net.fnothaft.ananas.debruijn
 
-import net.fnothaft.ananas.avro.AvroKmerVertex
+import net.fnothaft.ananas.avro.{ AvroKmerVertex, Link }
 import net.fnothaft.ananas.models.CanonicalKmer
 import org.apache.spark.rdd.RDD
 import scala.collection.JavaConversions._
@@ -26,8 +26,10 @@ private[debruijn] object ColoredKmerVertex extends KmerVertexCompanion[ColoredKm
     rdd.map(kv => {
       val (km, vertex) = kv
       (km.longHash, ColoredKmerVertex(km,
-                                      vertex.terminals,
-                                      vertex.stronglyConnected))
+                                      vertex.forwardTerminals,
+                                      vertex.forwardStronglyConnected,
+                                      vertex.reverseTerminals,
+                                      vertex.reverseStronglyConnected))
     })
   }
 
@@ -37,39 +39,80 @@ private[debruijn] object ColoredKmerVertex extends KmerVertexCompanion[ColoredKm
 
     val kmer = CanonicalKmer(vertex.getKmer)
 
-    val tb = asScalaBuffer(vertex.getTerminalNames)
-      .zip(asScalaBuffer(vertex.getTerminalIdx).map(v => int(v)))
-      .toSet
+    // build forward direction of k-mer
+    val fl = vertex.getForwardLink
+    val (ftb, fsc) = if (fl != null) {
+      (asScalaBuffer(fl.getTerminalNames)
+      .zip(asScalaBuffer(fl.getTerminalIdx).map(v => int(v)))
+      .toSet, asScalaBuffer(fl.getScNames)
+      .zip(asScalaBuffer(fl.getScIdx).map(v => int(v)))
+      .zip(asScalaBuffer(fl.getScLink).map(v => long(v)))
+      .toMap)
+    } else {
+      (Set.empty[(String, Int)], Map.empty[(String, Int), Long])
+    }
 
-    val sc = asScalaBuffer(vertex.getScNames)
-      .zip(asScalaBuffer(vertex.getScIdx).map(v => int(v)))
-      .zip(asScalaBuffer(vertex.getScLink).map(v => long(v)))
-      .toMap
+    // build reverse direction of k-mer
+    val rl = vertex.getReverseLink
+    val (rtb, rsc) = if (rl != null) {
+      (asScalaBuffer(rl.getTerminalNames)
+      .zip(asScalaBuffer(rl.getTerminalIdx).map(v => int(v)))
+      .toSet, asScalaBuffer(rl.getScNames)
+      .zip(asScalaBuffer(rl.getScIdx).map(v => int(v)))
+      .zip(asScalaBuffer(rl.getScLink).map(v => long(v)))
+      .toMap)
+    } else {
+      (Set.empty[(String, Int)], Map.empty[(String, Int), Long])
+    }
 
-    new ColoredKmerVertex(kmer, tb, sc)
+    new ColoredKmerVertex(kmer, ftb, fsc, rtb, rsc)
   }
 }
 
 case class ColoredKmerVertex(kmer: CanonicalKmer,
-                             terminals: Set[(String, Int)],
-                             stronglyConnected: Map[(String, Int), Long]) extends KmerVertex {
+                             forwardTerminals: Set[(String, Int)],
+                             forwardStronglyConnected: Map[(String, Int), Long],
+                             reverseTerminals: Set[(String, Int)],
+                             reverseStronglyConnected: Map[(String, Int), Long]) extends KmerVertex {
 
   def toAvro: AvroKmerVertex = {
-    val tb = terminals.toBuffer
-    val scb = stronglyConnected.toBuffer
-
+  
     def long(l: Long): java.lang.Long = l
     def int(i: Int): java.lang.Integer = i
 
-    AvroKmerVertex.newBuilder()
+    val builder = AvroKmerVertex.newBuilder()
       .setKmer(kmer.toAvro)
-      .setTerminalNames(bufferAsJavaList(tb.map(_._1)))
-      .setTerminalIdx(bufferAsJavaList(tb.map(v => int(v._2))))
-      .setScNames(bufferAsJavaList(scb.map(_._1._1)))
-      .setScIdx(bufferAsJavaList(scb.map(v => int(v._1._2))))
-      .setScLink(bufferAsJavaList(scb.map(v => long(v._2))))
-      .build()
+
+    // build forward link
+    val ftb = forwardTerminals.toBuffer
+    val fscb = forwardStronglyConnected.toBuffer
+
+    if (ftb.nonEmpty || fscb.nonEmpty) {
+      builder.setForwardLink(Link.newBuilder()
+        .setTerminalNames(bufferAsJavaList(ftb.map(_._1)))
+        .setTerminalIdx(bufferAsJavaList(ftb.map(v => int(v._2))))
+        .setScNames(bufferAsJavaList(fscb.map(_._1._1)))
+        .setScIdx(bufferAsJavaList(fscb.map(v => int(v._1._2))))
+        .setScLink(bufferAsJavaList(fscb.map(v => long(v._2))))
+        .build())
+    }
+
+    // build forward link
+    val rtb = reverseTerminals.toBuffer
+    val rscb = reverseStronglyConnected.toBuffer
+
+    if (rtb.nonEmpty || rscb.nonEmpty) {
+      builder.setReverseLink(Link.newBuilder()
+        .setTerminalNames(bufferAsJavaList(rtb.map(_._1)))
+        .setTerminalIdx(bufferAsJavaList(rtb.map(v => int(v._2))))
+        .setScNames(bufferAsJavaList(rscb.map(_._1._1)))
+        .setScIdx(bufferAsJavaList(rscb.map(v => int(v._1._2))))
+        .setScLink(bufferAsJavaList(rscb.map(v => long(v._2))))
+        .build())
+    }
+
+    builder.build()
   }
 
-  def connectsTo: Iterable[Long] = stronglyConnected.values
+  def connectsTo: Iterable[Long] = forwardStronglyConnected.values ++ reverseStronglyConnected.values
 }

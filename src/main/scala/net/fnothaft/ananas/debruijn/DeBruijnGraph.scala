@@ -68,7 +68,14 @@ trait DeBruijnGraph[T <: KmerVertex, L] extends Serializable {
     // flatmap all fragments to transient kmer vertices! w00t
     val kmers = fragments.flatMap(_.flattenFragment)
       .reduceByKey(TransientKmerVertex.merge[L](_, _))
-      .cache()
+      .map(v => (v._1.longHash, v))
+      .reduceByKey((p1, p2) => {
+        TransientKmerVertex.mergeCanon[L](p1._1,
+                                          p1._2,
+                                          p2._1,
+                                          p2._2)
+      }).map(p => p._2)
+        .cache()
 
     // map to vertices
     val vertices = vertexCompanion.makeRdd(kmers)
