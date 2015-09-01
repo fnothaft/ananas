@@ -17,15 +17,15 @@ package net.fnothaft.ananas.debruijn
 
 import net.fnothaft.ananas.avro.AvroKmerVertex
 import net.fnothaft.ananas.models.Fragment
+import org.apache.parquet.avro.AvroReadSupport
+import org.apache.parquet.hadoop.ParquetInputFormat
+import org.apache.parquet.hadoop.util.ContextUtil
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkContext
 import org.apache.spark.graphx.{ Edge, Graph }
 import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.HadoopUtil
-import parquet.avro.AvroReadSupport
-import parquet.hadoop.ParquetInputFormat
-import parquet.hadoop.util.ContextUtil
+import org.bdgenomics.utils.misc.HadoopUtil
 import scala.reflect.ClassTag
 
 trait DeBruijnGraph[T <: KmerVertex, L] extends Serializable {

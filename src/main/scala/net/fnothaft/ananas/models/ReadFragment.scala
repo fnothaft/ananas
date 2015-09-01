@@ -23,8 +23,8 @@ import org.apache.spark.rdd.RDD
 import org.bdgenomics.adam.converters.FastqRecordConverter
 import org.bdgenomics.adam.io.InterleavedFastqInputFormat
 import org.bdgenomics.adam.rdd.ADAMContext._
-import org.bdgenomics.adam.util.HadoopUtil
 import org.bdgenomics.formats.avro.AlignmentRecord
+import org.bdgenomics.utils.misc.HadoopUtil
 import parquet.hadoop.util.ContextUtil
 import scala.annotation.tailrec
 
