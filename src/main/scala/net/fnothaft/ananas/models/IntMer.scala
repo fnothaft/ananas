@@ -27,6 +27,17 @@ object IntMer {
     case 'T' => (3, 0)
     case 'N' => (0, 3)
   }
+
+  private def canon(kmer: Int, rcKmer: Int,
+                    mask: Int, rcMask: Int): IntMer = {
+    if ((kmer >= 0 && rcKmer < 0) ||
+        (((kmer >= 0 && rcKmer >= 0) ||
+          (kmer < 0 && rcKmer < 0)) && kmer < rcKmer)) {
+      new IntMer(kmer, mask, true)
+    } else {
+      new IntMer(rcKmer, rcMask, false)
+    }
+  }
   
   @tailrec private def constructKmer(c: Iterator[Char],
                                      kmer: Int = 0,
@@ -60,11 +71,7 @@ object IntMer {
 
     try {
       val (kmer, mask, rcKmer, rcMask) = constructKmer(str.toIterator)
-      if (kmer < rcKmer) {
-        new IntMer(kmer, mask, true)
-      } else {
-        new IntMer(rcKmer, rcMask, false)
-      }
+      canon(kmer, rcKmer, mask, rcMask)
     } catch {
       case t : MatchError => {
         throw new IllegalArgumentException("Received illegal k-mer string. %s has bad chars.".format(str))
@@ -81,11 +88,7 @@ object IntMer {
 
     // calculate first k-mer
     val (kmer, mask, rcKmer, rcMask) = constructKmer(seq.take(16).toIterator)
-    kArray(0) = if (kmer < rcKmer) {
-      new IntMer(kmer, mask, true)
-    } else {
-      new IntMer(rcKmer, rcMask, false)
-    }
+    kArray(0) = canon(kmer, rcKmer, mask, rcMask)
 
     @tailrec def extendKmer(c: Iterator[Char],
                             kmer: Int = 0,
@@ -107,11 +110,7 @@ object IntMer {
         val newRcMask = (rcMask >>> 2) | (m << 30)
 
         // insert k-mer into array
-        kArray(idx + 1) = if (newKmer < newRcKmer) {
-          new IntMer(newKmer, newMask, true)
-        } else {
-          new IntMer(newRcKmer, newRcMask, false)
-        }
+        kArray(idx + 1) = canon(newKmer, newRcKmer, newMask, newRcMask)
 
         // recurse
         extendKmer(c, newKmer, newMask, newRcKmer, newRcMask, idx + 1)

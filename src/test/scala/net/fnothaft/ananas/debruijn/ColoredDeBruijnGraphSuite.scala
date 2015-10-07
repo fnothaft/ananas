@@ -21,7 +21,7 @@ import net.fnothaft.ananas.models.{ CanonicalKmer, ContigFragment, IntMer }
 import org.apache.spark.SparkContext._
 import org.apache.spark.graphx.Graph
 import org.apache.spark.rdd.RDD
-import org.bdgenomics.adam.models.DNAAlphabet
+import org.bdgenomics.adam.models.{ Alphabet, Symbol }
 import org.bdgenomics.formats.avro.{ Contig, NucleotideContigFragment }
 
 class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
@@ -124,8 +124,9 @@ class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
       val fwdKmerCount = v._2.forwardTerminals.size + v._2.forwardStronglyConnected.size
       val revKmerCount = v._2.reverseTerminals.size + v._2.reverseStronglyConnected.size
 
-      Seq((v._2.kmer.toCanonicalString, fwdKmerCount),
+      val ks = Seq((v._2.kmer.toCanonicalString, fwdKmerCount),
           (v._2.kmer.toAntiCanonicalString, revKmerCount))
+      ks
     }).cache
     km.filter(_._2 != 0)
   }
@@ -137,7 +138,17 @@ class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
     val dbg = ColoredDeBruijnGraph.buildFromFragments(fragments).cache()
 
     val kmers = dbg.vertices.map(v => v._2.kmer.toOriginalString).cache
-    val textKmers = sc.textFile(file).filter(!_.startsWith(">")).flatMap(_.sliding(16))
+    val textKmers = sc.textFile(file)
+      .filter(!_.startsWith(">"))
+      .flatMap(_.sliding(16))
+      .map(v => {
+        val str = Alphabet.dna.reverseComplement(v, (c: Char) => Symbol('N', 'N'))
+        if (str.compare(v) > 0) {
+          v
+        } else {
+          str
+        }
+      })
 
     val textCount = textKmers.countByValue()
     val graphCount = getVertexKmerCounts(dbg).collectAsMap

@@ -35,7 +35,7 @@ class EmitAssemblySuite extends AnanasFunSuite {
       }).reduceLeft(_ + _), r)
   }
 
-  sparkTest("create assembly from small graph, single strand reads") {
+  ignore("create assembly from small graph, single strand reads") {
     val baseString = randomString(123, 2000)._1
     var read = -1
     val reads = sc.parallelize(baseString

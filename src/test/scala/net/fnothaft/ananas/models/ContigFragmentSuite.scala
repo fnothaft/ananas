@@ -58,13 +58,13 @@ class ContigFragmentSuite extends AnanasFunSuite {
     assert(flat(2)._1 === c("ACTGTGGGTACACTAC"))
     assert(flat(2)._2.forwardStronglyConnected(("ctg", 2)) === c("CTGTGGGTACACTACG").longHash)
     assert(flat(3)._1 === c("CTGTGGGTACACTACG"))
-    assert(flat(3)._2.forwardStronglyConnected(("ctg", 3)) === c("TGTGGGTACACTACGA").longHash)
+    assert(flat(3)._2.reverseStronglyConnected(("ctg", 3)) === c("TGTGGGTACACTACGA").longHash)
     assert(flat(4)._1 === c("TGTGGGTACACTACGA"))
-    assert(flat(4)._2.forwardStronglyConnected(("ctg", 4)) === c("GTGGGTACACTACGAG").longHash)
+    assert(flat(4)._2.reverseStronglyConnected(("ctg", 4)) === c("GTGGGTACACTACGAG").longHash)
     assert(flat(5)._1 === c("GTGGGTACACTACGAG"))
-    assert(flat(5)._2.forwardStronglyConnected(("ctg", 5)) === c("TGGGTACACTACGAGA").longHash)
+    assert(flat(5)._2.reverseStronglyConnected(("ctg", 5)) === c("TGGGTACACTACGAGA").longHash)
     assert(flat(6)._1 === c("TGGGTACACTACGAGA"))
-    assert(flat(6)._2.forwardTerminals(("ctg", 6)))
+    assert(flat(6)._2.reverseTerminals(("ctg", 6)))
   }
 
   test("build and flatten a fragment from a NCF from the middle of a contig") {
@@ -102,11 +102,11 @@ class ContigFragmentSuite extends AnanasFunSuite {
     assert(flat(2)._1 === c("ACTGTGGGTACACTAC"))
     assert(flat(2)._2.forwardStronglyConnected(("ctg", 22)) === c("CTGTGGGTACACTACG").longHash)
     assert(flat(3)._1 === c("CTGTGGGTACACTACG"))
-    assert(flat(3)._2.forwardStronglyConnected(("ctg", 23)) === c("TGTGGGTACACTACGA").longHash)
+    assert(flat(3)._2.reverseStronglyConnected(("ctg", 23)) === c("TGTGGGTACACTACGA").longHash)
     assert(flat(4)._1 === c("TGTGGGTACACTACGA"))
-    assert(flat(4)._2.forwardStronglyConnected(("ctg", 24)) === c("GTGGGTACACTACGAG").longHash)
+    assert(flat(4)._2.reverseStronglyConnected(("ctg", 24)) === c("GTGGGTACACTACGAG").longHash)
     assert(flat(5)._1 === c("GTGGGTACACTACGAG"))
-    assert(flat(5)._2.forwardStronglyConnected(("ctg", 25)) === c("TGGGTACACTACGAGA").longHash)
+    assert(flat(5)._2.reverseStronglyConnected(("ctg", 25)) === c("TGGGTACACTACGAGA").longHash)
   }
 
   sparkTest("load k-mers from file") {

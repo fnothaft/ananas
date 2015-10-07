@@ -64,10 +64,26 @@ case class ContigFragment(id: String,
                          sequenceIter: Iterator[CanonicalKmer],
                          idx: Int = 0) {
       if (!sequenceIter.hasNext && isLast) {
-        array(idx) = (kmer, TransientKmerVertex[String](forwardTerminals = Set((id, idx + startPos))))
+        val kSet = Set((id, idx + startPos))
+
+        // get correct orientation; see ANANAS-18
+        val tkv = if (kmer.isOriginal) {
+          TransientKmerVertex[String](forwardTerminals = kSet)
+        } else {
+          TransientKmerVertex[String](reverseTerminals = kSet)
+        }
+        array(idx) = (kmer, tkv)
       } else if (sequenceIter.hasNext) {
         val nextKmer = sequenceIter.next
-        array(idx) = (kmer, TransientKmerVertex[String](forwardStronglyConnected = Map(((id, idx + startPos) -> nextKmer.longHash))))
+        val kMap = Map(((id, idx + startPos) -> nextKmer.longHash))
+
+        // get correct orientation; see ANANAS-18
+        val tkv = if (kmer.isOriginal) {
+          TransientKmerVertex[String](forwardStronglyConnected = kMap)
+        } else {
+          TransientKmerVertex[String](reverseStronglyConnected = kMap)
+        }
+        array(idx) = (kmer, tkv)
 
         flatten(nextKmer, sequenceIter, idx + 1)
       }
