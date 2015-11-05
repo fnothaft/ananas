@@ -141,14 +141,6 @@ class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
     val textKmers = sc.textFile(file)
       .filter(!_.startsWith(">"))
       .flatMap(_.sliding(16))
-      .map(v => {
-        val str = Alphabet.dna.reverseComplement(v, (c: Char) => Symbol('N', 'N'))
-        if (str.compare(v) > 0) {
-          v
-        } else {
-          str
-        }
-      })
 
     val textCount = textKmers.countByValue()
     val graphCount = getVertexKmerCounts(dbg).collectAsMap
@@ -165,5 +157,35 @@ class ColoredDeBruijnGraphSuite extends AnanasFunSuite {
       assert(textCount.contains(kmer))
       assert(textCount(kmer) === count)
     })
+  }
+
+  sparkTest("build graph from contig file, redux") {
+    val file = ClassLoader.getSystemClassLoader.getResource("contigs2.fa").getFile
+
+    val fragments = ContigFragment.loadFromFile(sc, file).cache()
+    val dbg = ColoredDeBruijnGraph.buildFromFragments(fragments).cache()
+
+    val kmers = dbg.vertices.map(v => v._2.kmer.toOriginalString).cache
+    val textKmers = sc.textFile(file)
+      .filter(!_.startsWith(">"))
+      .flatMap(_.sliding(16))
+
+    val textCount = textKmers.countByValue()
+    val graphCount = getVertexKmerCounts(dbg).collectAsMap
+
+    var missing = List[String]()
+
+    textCount.foreach(p => {
+      val (kmer, count) = p
+      assert(graphCount.contains(kmer))
+      assert(graphCount(kmer) === count)
+    })
+    graphCount.foreach(p => {
+      val (kmer, count) = p
+      assert(textCount.contains(kmer))
+      assert(textCount(kmer) === count)
+    })
+    assert(graphCount.size === 48)
+    assert(textCount.size === 48)
   }
 }

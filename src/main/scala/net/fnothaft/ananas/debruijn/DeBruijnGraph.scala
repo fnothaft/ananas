@@ -67,13 +67,20 @@ trait DeBruijnGraph[T <: KmerVertex, L] extends Serializable {
   def buildFromFragments[F <: Fragment[L]](fragments: RDD[F])(implicit tTag: ClassTag[T]): Graph[T, Unit] = {
     // flatmap all fragments to transient kmer vertices! w00t
     val kmers = fragments.flatMap(_.flattenFragment)
-      .reduceByKey(TransientKmerVertex.merge[L](_, _))
       .map(v => (v._1.longHash, v))
       .reduceByKey((p1, p2) => {
-        TransientKmerVertex.mergeCanon[L](p1._1,
-                                          p1._2,
-                                          p2._1,
-                                          p2._2)
+        assert(p1._1.sameExceptForOrientation(p2._1),
+               "Asked to merge %s and %s, which are not canonical twins.".format(
+          p1._1, p2._1))
+
+        val fwdKmer = if (p1._1.isOriginal) {
+          p1._1
+        } else {
+          p2._1
+        }
+          
+        (fwdKmer, TransientKmerVertex.merge[L](p1._2,
+                                             p2._2))
       }).map(p => p._2)
         .cache()
 
